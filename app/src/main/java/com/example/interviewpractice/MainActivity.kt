@@ -51,23 +51,29 @@ class MainActivity : Activity() {
     private fun primary() = prefs.getInt("primary", Color.rgb(78,93,210))
     private fun background() = prefs.getInt("background", Color.rgb(242,245,255))
 
-    private fun baseLayout() = LinearLayout(this).apply { orientation=LinearLayout.VERTICAL; setPadding(24,24,24,24); setBackgroundColor(background()) }
+    private fun baseLayout() = LinearLayout(this).apply {
+        orientation=LinearLayout.VERTICAL; setPadding(26,26,26,26)
+        background=GradientDrawable(GradientDrawable.Orientation.TL_BR,intArrayOf(background(),Color.rgb(255,255,255),background())).apply{
+            cornerRadius=34f;setStroke(7,primary())
+        }
+    }
     private fun title(text:String,size:Float=26f)=TextView(this).apply{this.text=text;textSize=size;setTextColor(Color.rgb(31,41,84));setPadding(0,8,0,16);gravity=Gravity.CENTER}
     private fun card(text:String,size:Float=17f)=TextView(this).apply{this.text=text;textSize=size;setTextColor(Color.rgb(35,42,60));setPadding(22,22,22,22);background=GradientDrawable().apply{setColor(Color.WHITE);cornerRadius=28f;setStroke(2,Color.rgb(225,229,245))};elevation=7f}
     private fun button(text:String)=Button(this).apply{this.text=text;textSize=16f;isAllCaps=false;setTextColor(Color.WHITE);background=GradientDrawable().apply{setColor(primary());cornerRadius=28f};setPadding(14,10,14,10);elevation=5f}
-    private fun animateIn(v:View){v.alpha=0f;v.translationY=22f;v.animate().alpha(1f).translationY(0f).setDuration(420).start()}
-    private fun pulse(v:View){val a=AlphaAnimation(0.45f,1f);a.duration=650;a.repeatMode=Animation.REVERSE;a.repeatCount=Animation.INFINITE;v.startAnimation(a)}
+    private fun animateIn(v:View){if(!prefs.getBoolean("animation",true)){v.alpha=1f;return};v.alpha=0f;v.translationY=22f;v.animate().alpha(1f).translationY(0f).setDuration(420).start()}
+    private fun pulse(v:View){if(!prefs.getBoolean("animation",true))return;val a=AlphaAnimation(0.45f,1f);a.duration=650;a.repeatMode=Animation.REVERSE;a.repeatCount=Animation.INFINITE;v.startAnimation(a)}
+    private fun booksBanner():TextView=TextView(this).apply{ text="📚  📖  📕  📗  📘  📙  📚";textSize=25f;gravity=Gravity.CENTER;setPadding(0,4,0,8);setTextColor(Color.rgb(75,55,100));if(prefs.getBoolean("animation",true))pulse(this) }
 
     private fun showHome(){
-        root=baseLayout();root.addView(title("🎯 Interview Practice",30f));root.addView(title("Practice • Speak • Review • Improve",18f))
+        root=baseLayout();root.addView(booksBanner());root.addView(title("🎯 Interview Practice",30f));root.addView(title("Practice • Speak • Review • Improve",18f))
         val test=button("🎤  Start Test");val list=button("📚  All Questions & Answers");val review=button("📝  Review My Answers");val settings=button("⚙️  Settings");val clear=button("🗑️  Clear My Results")
         listOf(test,list,review,settings,clear).forEach{root.addView(it);(it.layoutParams as LinearLayout.LayoutParams).setMargins(0,7,0,7);animateIn(it)}
-        setContentView(root);test.setOnClickListener{showTest()};list.setOnClickListener{showQuestionList()};review.setOnClickListener{showReview()};settings.setOnClickListener{showSettings()}
+        val footer=title("✨ Learn • Speak • Improve • Repeat ✨",15f);root.addView(footer);setContentView(root);test.setOnClickListener{showTest()};list.setOnClickListener{showQuestionList()};review.setOnClickListener{showReview()};settings.setOnClickListener{showSettings()}
         clear.setOnClickListener{attempts.clear();total=0;answered=0;Toast.makeText(this,"Results cleared",Toast.LENGTH_SHORT).show();showHome()}
     }
 
     private fun showSettings(){
-        root=baseLayout();val home=button("←  Home");root.addView(home);home.setOnClickListener{showHome()};root.addView(title("⚙️ Settings",28f));root.addView(title("Choose app colour",18f))
+        root=baseLayout();val home=button("←  Home");root.addView(home);home.setOnClickListener{showHome()};root.addView(booksBanner());root.addView(title("⚙️ Settings",28f));root.addView(title("Choose app colour",18f))
         listOf("🔵 Blue" to Color.rgb(78,93,210),"🟣 Purple" to Color.rgb(125,82,190),"🟢 Green" to Color.rgb(35,145,100),"🟠 Orange" to Color.rgb(225,125,45),"🌸 Pink" to Color.rgb(205,75,135)).forEach{(name,color)->val b=button(name);b.setOnClickListener{prefs.edit().putInt("primary",color).apply();showSettings()};root.addView(b);animateIn(b)}
         val anim=Switch(this).apply{text="✨ Animated UI";textSize=17f;isChecked=prefs.getBoolean("animation",true);setPadding(0,20,0,20)};root.addView(anim);anim.setOnCheckedChangeListener{_,checked->prefs.edit().putBoolean("animation",checked).apply()}
         root.addView(card("🔊 Voice sound\n\nThe small microphone/listening beep is produced by Android's speech-recognition service. The app does not play an extra sound, so there is no extra app sound to turn down. If Android exposes a speech/assistant volume control on your phone, that controls this beep."))
@@ -80,8 +86,8 @@ class MainActivity : Activity() {
         qText=card("");root.addView(qText);animateIn(qText);speak=button("🎤  Start Speaking");root.addView(speak);animateIn(speak);result=card("");root.addView(result);result.visibility=View.GONE
         val next=button("➡️  Next Question");root.addView(next);setContentView(root);showQuestion();speak.setOnClickListener{if(listening)finishAnswer() else startListening()};next.setOnClickListener{stopListening();index=(index+1)%questions.size;result.text="";result.visibility=View.GONE;showQuestion()}
     }
-    private fun showQuestionList(){val scroll=ScrollView(this);val list=baseLayout();val home=button("←  Home");list.addView(home);home.setOnClickListener{showHome()};list.addView(title("📚 Questions & Answers",26f));questions.forEachIndexed{i,q->val c=card("Q${i+1}. ${q.question}\n\nAnswer: ${q.answer}");list.addView(c);animateIn(c);c.setOnClickListener{index=i;showTest()}};scroll.addView(list);setContentView(scroll)}
-    private fun showReview(){val scroll=ScrollView(this);val list=baseLayout();val home=button("←  Home");list.addView(home);home.setOnClickListener{showHome()};list.addView(title("📝 My Answer Review",26f));if(attempts.isEmpty())list.addView(title("No answers yet. Start a test first.",18f));attempts.forEach{a->val q=questions[a.questionIndex];val c=card("Q${a.questionIndex+1}. ${q.question}\n\n🗣️ YOUR ANSWER\n${a.spoken.ifBlank{"(No answer detected)"}}\n\n⭐ SCORE: ${a.marks}/10\n\n✅ CORRECT ANSWER\n${q.answer}");list.addView(c);animateIn(c)};scroll.addView(list);setContentView(scroll)}
+    private fun showQuestionList(){val scroll=ScrollView(this);val list=baseLayout();val home=button("←  Home");list.addView(home);home.setOnClickListener{showHome()};list.addView(booksBanner());list.addView(title("📚 Questions & Answers",26f));questions.forEachIndexed{i,q->val c=card("Q${i+1}. ${q.question}\n\nAnswer: ${q.answer}");list.addView(c);animateIn(c);c.setOnClickListener{index=i;showTest()}};scroll.addView(list);setContentView(scroll)}
+    private fun showReview(){val scroll=ScrollView(this);val list=baseLayout();val home=button("←  Home");list.addView(home);home.setOnClickListener{showHome()};list.addView(booksBanner());list.addView(title("📝 My Answer Review",26f));if(attempts.isEmpty())list.addView(title("No answers yet. Start a test first.",18f));attempts.forEach{a->val q=questions[a.questionIndex];val c=card("Q${a.questionIndex+1}. ${q.question}\n\n🗣️ YOUR ANSWER\n${a.spoken.ifBlank{"(No answer detected)"}}\n\n⭐ SCORE: ${a.marks}/10\n\n✅ CORRECT ANSWER\n${q.answer}");list.addView(c);animateIn(c)};scroll.addView(list);setContentView(scroll)}
     private fun showQuestion(){qText.text="Q${index+1}\n\n${questions[index].question}";score.text="⭐ Score: $total   •   Answered: $answered/${questions.size}";progress.progress=answered.coerceAtMost(questions.size);speak.isEnabled=true;speak.text="🎤  Start Speaking"}
 
     private fun startListening(){
