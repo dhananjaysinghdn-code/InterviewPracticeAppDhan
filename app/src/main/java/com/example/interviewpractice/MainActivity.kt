@@ -9,6 +9,7 @@ import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
 import android.os.Handler
+import android.os.Looper
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
@@ -33,9 +34,10 @@ class MainActivity:Activity(){
   Q("What is an API?","An API is an interface that allows software systems to communicate.",listOf("api","interface","communicate"))
  )
  private var index=0;private var total=0;private var answered=0;private var listening=false;private var finishing=false
- private var spokenText=StringBuilder();private var recognizer:SpeechRecognizer?=null;private val attempts=mutableListOf<Attempt>();private val handler=Handler(mainLooper)
+ private var spokenText=StringBuilder();private var recognizer:SpeechRecognizer?=null;private val attempts=mutableListOf<Attempt>()
+ private lateinit var handler:Handler
  private lateinit var prefs:SharedPreferences;private lateinit var root:LinearLayout;private lateinit var qText:TextView;private lateinit var result:TextView;private lateinit var score:TextView;private lateinit var speak:Button;private lateinit var progress:ProgressBar
- override fun onCreate(b:Bundle?){super.onCreate(b);try{prefs=getSharedPreferences("settings",MODE_PRIVATE);showHome()}catch(e:Exception){showSafeHome()}}
+ override fun onCreate(b:Bundle?){super.onCreate(b);handler=Handler(Looper.getMainLooper());try{prefs=getSharedPreferences("settings",MODE_PRIVATE);showHome()}catch(e:Exception){showSafeHome()}}
  private fun showSafeHome(){val l=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;gravity=Gravity.CENTER;setPadding(30,30,30,30);setBackgroundColor(Color.rgb(245,247,255))};val t=TextView(this).apply{text="🎯 Interview Practice\n\nApp started in safe mode.";textSize=24f;gravity=Gravity.CENTER};l.addView(t);val b=Button(this).apply{text="Close"};l.addView(b);b.setOnClickListener{finish()};setContentView(l)}
  private fun primary()=prefs.getInt("primary",Color.rgb(78,93,210));private fun bg()=prefs.getInt("background",Color.rgb(242,245,255));private fun qColor()=prefs.getInt("qcolor",Color.rgb(31,41,84));private fun myColor()=prefs.getInt("mycolor",Color.rgb(210,105,35));private fun rightColor()=prefs.getInt("rightcolor",Color.rgb(30,145,90))
  private fun baseLayout()=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;setPadding(26,26,26,26);setBackgroundColor(bg())}
