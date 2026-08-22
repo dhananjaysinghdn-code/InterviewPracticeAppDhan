@@ -17,33 +17,527 @@ import android.view.Gravity
 import android.view.View
 import android.view.animation.Animation
 import android.view.animation.TranslateAnimation
-import android.widget.*
+import android.widget.Button
+import android.widget.LinearLayout
+import android.widget.ScrollView
+import android.widget.Switch
+import android.widget.TextView
+import android.widget.Toast
 import java.util.Locale
 
-data class BankItem(val question:String,val answer:String,val category:String,val keywords:List<String>,val code:String="")
-data class Attempt(val i:Int,val text:String,val mark:Int)
+data class InterviewQuestion(
+    val question: String,
+    val answer: String,
+    val category: String,
+    val keywords: List<String> = emptyList(),
+    val code: String = ""
+)
 
-class MainActivity:Activity(){
- private val qs=buildBank();private var i=0;private var total=0;private var answered=0;private var listening=false;private var finishing=false;private val spoken=StringBuilder();private var sr:SpeechRecognizer?=null;private val history=mutableListOf<Attempt>();private lateinit var h:Handler;private lateinit var p:SharedPreferences;private lateinit var root:LinearLayout;private lateinit var qv:TextView;private lateinit var out:TextView;private lateinit var sv:TextView;private lateinit var speak:Button
- override fun onCreate(b:Bundle?){super.onCreate(b);h=Handler(Looper.getMainLooper());p=getSharedPreferences("settings",MODE_PRIVATE);home()}
- private fun buildBank():List<BankItem>{val a=mutableListOf<BankItem>();fun add(q:String,ans:String,cat:String="Selenium",kw:String="",code:String=""){a.add(BankItem(q,ans,cat,kw.split(",").filter{it.isNotBlank()},code))};add("What is Selenium WebDriver?","Selenium WebDriver is an API used to automate web browsers.",kw="selenium,webdriver,automate,browser");add("What is XPath?","XPath is a locator used to identify elements in HTML or XML.",kw="xpath,locator,element");add("What is an explicit wait?","It waits for a specific condition before continuing.",kw="explicit,wait,condition");add("What is TestNG?","TestNG is a Java testing framework for organizing and executing tests.","TestNG","testng,java,framework");add("What is POM?","Page Object Model keeps locators and page actions inside page classes.","Framework","page,object,model,locator,action");add("What is SQL?","SQL is used to query and manage relational database data.","SQL","sql,query,database");add("What is an API?","An API is an interface that allows software systems to communicate.","API","api,interface,communicate");add("How do you click an element?","Use findElement with a locator and call click().",kw="click,element",code="driver.findElement(By.id(\"login\")).click();");add("How do you enter text?","Use sendKeys() on the WebElement.",kw="sendkeys,text",code="driver.findElement(By.id(\"user\")).sendKeys(\"admin\");");add("How do you hover?","Use Actions moveToElement().",kw="actions,hover,move",code="new Actions(driver).moveToElement(element).perform();");add("How do you switch to a frame?","Use driver.switchTo().frame().",kw="frame,switch",code="driver.switchTo().frame(element);");add("How do you accept an alert?","Switch to the alert and call accept().",kw="alert,accept",code="driver.switchTo().alert().accept();");add("How do you select a dropdown value?","Use Selenium Select class.",kw="select,dropdown",code="new Select(element).selectByVisibleText(\"India\");");add("How do you wait for visibility?","Use WebDriverWait with ExpectedConditions.",kw="wait,visibility",code="new WebDriverWait(driver, Duration.ofSeconds(10)).until(ExpectedConditions.visibilityOf(element));");add("How do you double click?","Use Actions doubleClick().",kw="actions,doubleclick",code="new Actions(driver).doubleClick(element).perform();");add("How do you right click?","Use Actions contextClick().",kw="actions,rightclick",code="new Actions(driver).contextClick(element).perform();");add("How do you drag and drop?","Use Actions dragAndDrop().",kw="actions,drag,drop",code="new Actions(driver).dragAndDrop(source,target).perform();");add("How do you switch window?","Use driver.switchTo().window(handle).",kw="window,switch",code="driver.switchTo().window(handle);");add("How do you get text?","Use getText() on the element.",kw="gettext,text",code="String text=element.getText();");add("How do you take a screenshot?","Use TakesScreenshot.",kw="screenshot",code="((TakesScreenshot)driver).getScreenshotAs(OutputType.FILE);");add("How do you scroll to an element?","Use JavaScriptExecutor.",kw="scroll,javascript",code="((JavascriptExecutor)driver).executeScript(\"arguments[0].scrollIntoView(true);\", element);");add("What is implicit wait?","It sets a global wait for locating elements.",kw="implicit,wait",code="driver.manage().timeouts().implicitlyWait(Duration.ofSeconds(10));");add("What is an interface in Java?","An interface defines a contract that classes can implement.","Core Java","interface,contract,java");add("What is inheritance?","Inheritance allows a class to acquire properties and behavior of another class.","Core Java","inheritance,class,java");add("What is polymorphism?","Polymorphism allows one interface or method to have multiple implementations.","Core Java","polymorphism,method");add("What is encapsulation?","Encapsulation bundles data and methods and controls access to data.","Core Java","encapsulation,data,methods");add("What is an ArrayList?","ArrayList is a resizable ordered collection in Java.","Collections","arraylist,collection");add("What is HashMap?","HashMap stores key-value pairs and allows fast lookup by key.","Collections","hashmap,key,value");add("What is exception handling?","It handles runtime problems using try, catch, finally and related constructs.","Core Java","exception,try,catch");add("What is Maven?","Maven is a build and dependency management tool.","Maven","maven,build,dependency");add("What is Git?","Git is a distributed version control system.","Git","git,version,control");add("What is CI/CD?","CI/CD automates building, testing and delivery of software.","CI/CD","ci,cd,build,test,delivery");add("What is REST API?","REST is an architectural style commonly used for HTTP APIs.","API","rest,http,api");add("What is regression testing?","Regression testing verifies that existing functionality still works after changes.","Testing","regression,testing");add("What is smoke testing?","Smoke testing checks whether a build is stable enough for further testing.","Testing","smoke,build,testing");while(a.size<420){val n=a.size+1;add("Interview Practice Question $n?","Give a concise, project-focused answer based on the relevant concept and explain your approach clearly.","Scenario","project,approach")}return a}
- private fun bg()=p.getInt("background",Color.rgb(242,245,255));private fun primary()=p.getInt("primary",Color.rgb(78,93,210));private fun lay()=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;setPadding(24,24,24,24);setBackgroundColor(bg())};private fun t(s:String,z:Float=18f)=TextView(this).apply{text=s;textSize=z;gravity=Gravity.CENTER;setTextColor(Color.rgb(30,40,75));setPadding(8,10,8,10)};private fun b(s:String)=Button(this).apply{text=s;textSize=16f;isAllCaps=false;setTextColor(Color.WHITE);setBackgroundColor(primary())};private fun c(s:String)=TextView(this).apply{text=s;textSize=17f;setPadding(20,20,20,20);setTextColor(Color.DKGRAY);setBackgroundColor(Color.WHITE);elevation=5f};private fun girl()=t("👩‍💻✨",40f).also{if(p.getBoolean("animation",true)){val a=TranslateAnimation(-30f,30f,0f,0f);a.duration=1400;a.repeatMode=Animation.REVERSE;a.repeatCount=Animation.INFINITE;it.startAnimation(a)}};private fun add(v:View){root.addView(v);v.animate().alpha(1f).setDuration(250).start()}
- private fun home(){root=lay();add(t("📚  📖  📕  📗  📘  📙",25f));add(girl());add(t("🎯 Interview Practice",30f));add(t("420+ Q&A • Speak • Exam • Quick Code",17f));add(b("🎤 Start Test").also{it.setOnClickListener{test()}});add(b("📚 All Questions & Answers").also{it.setOnClickListener{all()}});add(b("📝 Review My Answers").also{it.setOnClickListener{review()}});add(b("⏱️ Exam Mode").also{it.setOnClickListener{examSetup()}});add(b("⚡ Selenium Quick Code").also{it.setOnClickListener{quickCode()}});add(b("⚙️ Settings").also{it.setOnClickListener{settings()}});add(b("🗑️ Clear Results").also{it.setOnClickListener{history.clear();total=0;answered=0;Toast.makeText(this,"Results cleared",Toast.LENGTH_SHORT).show()}});setContentView(root)}
- private fun test(){root=lay();add(b("← Home").also{it.setOnClickListener{stop();home()}});sv=t("⭐ Score: $total • Answered: $answered",17f);add(sv);qv=c("");add(qv);speak=b("🎤 Start Speaking");add(speak);out=c("");out.visibility=View.GONE;add(out);add(b("➡️ Next Question").also{it.setOnClickListener{stop();i=(i+1)%qs.size;showQ()}});setContentView(root);showQ();speak.setOnClickListener{if(listening)finishAnswer()else listen()}}
- private fun showQ(){qv.text="Q${i+1}\n\n${qs[i].question}";speak.text="🎤 Start Speaking"}
- private fun listen(){if(checkSelfPermission(Manifest.permission.RECORD_AUDIO)!=PackageManager.PERMISSION_GRANTED){requestPermissions(arrayOf(Manifest.permission.RECORD_AUDIO),7);return};try{sr?.destroy();sr=SpeechRecognizer.createSpeechRecognizer(this);sr!!.setRecognitionListener(listener);spoken.clear();finishing=false;listening=true;speak.text="⏹️ Listening...";out.visibility=View.VISIBLE;out.text="🎧 Ready... speak your answer.";startRec()}catch(_:Exception){out.text="Voice could not start. Try again."}}
- private val listener=object:RecognitionListener{override fun onReadyForSpeech(p:Bundle?){out.text="🎧 Ready..."};override fun onBeginningOfSpeech(){out.text="🎧 Listening..."};override fun onRmsChanged(r:Float){};override fun onBufferReceived(b:ByteArray?){};override fun onEndOfSpeech(){};override fun onError(e:Int){if(!finishing)h.postDelayed({if(listening)startRec()},400)};override fun onResults(d:Bundle?){val x=d?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull().orEmpty();if(x.isNotBlank())spoken.append(" ").append(x);if(!finishing)h.postDelayed({finishAnswer()},300)};override fun onPartialResults(d:Bundle?){val x=d?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull().orEmpty();if(x.isNotBlank())out.text="🎧 $x"};override fun onEvent(t:Int,p:Bundle?){} }
- private fun startRec(){try{sr?.startListening(Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply{putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);putExtra(RecognizerIntent.EXTRA_LANGUAGE,Locale.ENGLISH);putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS,true);putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS,3000L);putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS,3000L)})}catch(_:Exception){}}
- private fun finishAnswer(){if(finishing)return;finishing=true;listening=false;try{sr?.stopListening()}catch(_:Exception){};val q=qs[i];val s=spoken.toString().lowercase();val hit=q.keywords.count{s.contains(it)};val pct=if(q.keywords.isEmpty())0 else hit*100/q.keywords.size;val mark=when{pct>=75->10;pct>=50->7;pct>=25->4;else->1};total+=mark;answered++;history.add(Attempt(i,spoken.toString(),mark));out.visibility=View.VISIBLE;out.text="🗣️ YOUR ANSWER\n${spoken.toString().trim()}\n\n⭐ $mark/10\n\n✅ CORRECT ANSWER\n${q.answer}${if(q.code.isNotBlank())"\n\n⚡ ONE-LINE CODE\n${q.code}"else""}";sv.text="⭐ Score: $total • Answered: $answered"}
- private fun stop(){finishing=true;listening=false;try{sr?.stopListening();sr?.destroy()}catch(_:Exception){};sr=null}
- private fun all(){val sc=ScrollView(this);root=lay();add(b("← Home").also{it.setOnClickListener{home()}});add(t("📚 All Questions & Answers",27f));qs.forEachIndexed{n,q->add(c("Q${n+1}. ${q.question}\n\n${q.answer}${if(q.code.isNotBlank())"\n\n⚡ ${q.code}"else""}"))};sc.addView(root);setContentView(sc)}
- private fun quickCode(){val sc=ScrollView(this);root=lay();add(b("← Home").also{it.setOnClickListener{home()}});add(t("⚡ Selenium Quick Code",27f));qs.filter{it.code.isNotBlank()}.forEach{add(c("${it.question}\n\n${it.code}\n\n${it.answer}"))};sc.addView(root);setContentView(sc)}
- private fun review(){val sc=ScrollView(this);root=lay();add(b("← Home").also{it.setOnClickListener{home()}});add(t("📝 My Answers",27f));if(history.isEmpty())add(t("No attempts yet.",18f));history.forEach{a->val q=qs[a.i];add(c("Q${a.i+1}. ${q.question}\n\n🗣️ YOUR ANSWER\n${a.text.ifBlank{"No answer detected"}}\n\n⭐ ${a.mark}/10\n\n✅ CORRECT ANSWER\n${q.answer}"))};sc.addView(root);setContentView(sc)}
- private var exam=emptyList<BankItem>();private var ep=0;private var ec=0;private var timer:CountDownTimer?=null;private lateinit var eq:TextView;private lateinit var es:TextView;private lateinit var next:Button
- private fun examSetup(){root=lay();add(b("← Home").also{it.setOnClickListener{home()}});add(girl());add(t("📝 Exam Mode",29f));add(t("Choose size",18f));listOf(20,50,100).forEach{n->add(b("$n Questions").also{x->x.setOnClickListener{startExam(n)}})};add(c("20 Q = 20 min • 50 Q = 45 min • 100 Q = 90 min"));setContentView(root)}
- private fun startExam(n:Int){exam=qs.shuffled().take(n);ep=0;ec=0;root=lay();add(b("✕ Exit").also{it.setOnClickListener{timer?.cancel();home()}});es=t("Question 1/$n • Score 0",17f);add(es);eq=c("");add(eq);val opts=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL};add(opts);next=b("Next");add(next);setContentView(root);render(opts);val mins=if(n<=20)20L else if(n<=50)45L else 90L;timer=object:CountDownTimer(mins*60000,1000){override fun onTick(ms:Long){es.text="Question ${ep+1}/$n • Score $ec • ⏱️ ${ms/60000}:${String.format("%02d",(ms/1000)%60)}"};override fun onFinish(){finishExam()}}.start()}
- private fun render(opts:LinearLayout){opts.removeAllViews();val q=exam[ep];eq.text="[${q.category}]\n\n${q.question}";val answers=(listOf(q.answer)+qs.filter{it.question!=q.question}.shuffled().take(3).map{it.answer}).shuffled();for(a in answers){val x=b(a);opts.addView(x);x.setOnClickListener{for(j in 0 until opts.childCount)opts.getChildAt(j).isEnabled=false;if(a==q.answer){ec++;x.text="✅ $a"}else x.text="❌ $a";next.text=if(ep==exam.lastIndex)"Submit Exam"else"Next"}};next.setOnClickListener{if(ep==exam.lastIndex)finishExam()else{ep++;render(opts)}}}
- private fun finishExam(){timer?.cancel();val pct=if(exam.isEmpty())0 else ec*100/exam.size;root=lay();add(girl());add(t("🏆 Exam Complete",30f));add(t("$ec / ${exam.size}",38f));add(t("$pct%",30f));add(c(if(pct>=90)"🏆 Excellent!"else if(pct>=75)"🌟 Very Good!"else if(pct>=60)"👍 Good progress!"else"💪 Keep practicing!"));add(b("← Home").also{it.setOnClickListener{home()}});setContentView(root)}
- private fun settings(){root=lay();add(b("← Home").also{it.setOnClickListener{home()}});add(girl());add(t("⚙️ Settings",28f));listOf("🔵 Blue" to Color.rgb(78,93,210),"🟣 Purple" to Color.rgb(125,82,190),"🟢 Green" to Color.rgb(35,145,100),"🟠 Orange" to Color.rgb(225,125,45),"🌸 Pink" to Color.rgb(205,75,135),"🔴 Red" to Color.rgb(205,55,65)).forEach{(n,col)->add(b(n).also{x->x.setOnClickListener{p.edit().putInt("primary",col).apply();settings()}})};add(t("Background colour",17f));listOf("☁️ Blue" to Color.rgb(205,220,255),"🌙 Dark" to Color.rgb(35,38,50),"🌿 Green" to Color.rgb(205,240,218),"🌸 Pink" to Color.rgb(255,210,232),"🌊 Sky" to Color.rgb(190,225,255),"🌅 Cream" to Color.rgb(255,230,180),"⚪ White" to Color.WHITE).forEach{(n,col)->add(b(n).also{x->x.setOnClickListener{p.edit().putInt("background",col).apply();settings()}})};add(Switch(this).apply{text="✨ Animation + moving girl";isChecked=p.getBoolean("animation",true);setOnCheckedChangeListener{_,v->p.edit().putBoolean("animation",v).apply()}});add(c("Question = blue • Your Answer = orange • Correct Answer = green\nVoice completes after about 3 seconds of silence."));add(b("Save & Home").also{it.setOnClickListener{home()}});setContentView(root)}
- override fun onRequestPermissionsResult(r:Int,a:Array<out String>,g:IntArray){super.onRequestPermissionsResult(r,a,g);if(r==7&&g.isNotEmpty()&&g[0]==PackageManager.PERMISSION_GRANTED)listen()};override fun onDestroy(){stop();timer?.cancel();super.onDestroy()}
+data class Attempt(
+    val questionIndex: Int,
+    val spokenAnswer: String,
+    val score: Int
+)
+
+class MainActivity : Activity() {
+    private lateinit var prefs: SharedPreferences
+    private lateinit var handler: Handler
+    private lateinit var root: LinearLayout
+    private lateinit var questionView: TextView
+    private lateinit var answerView: TextView
+    private lateinit var scoreView: TextView
+    private lateinit var speakButton: Button
+
+    private val questions = createQuestionBank()
+    private val attempts = mutableListOf<Attempt>()
+    private var questionIndex = 0
+    private var totalScore = 0
+    private var answeredCount = 0
+    private var speechRecognizer: SpeechRecognizer? = null
+    private var listening = false
+    private var finishingAnswer = false
+    private val spokenText = StringBuilder()
+
+    private var examQuestions = emptyList<InterviewQuestion>()
+    private var examIndex = 0
+    private var examScore = 0
+    private var examTimer: CountDownTimer? = null
+    private lateinit var examQuestionView: TextView
+    private lateinit var examStatusView: TextView
+    private lateinit var examNextButton: Button
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        handler = Handler(Looper.getMainLooper())
+        prefs = getSharedPreferences("settings", MODE_PRIVATE)
+        showHome()
+    }
+
+    private fun createQuestionBank(): List<InterviewQuestion> {
+        val list = mutableListOf<InterviewQuestion>()
+
+        fun add(q: String, a: String, category: String, keywords: String = "", code: String = "") {
+            list.add(
+                InterviewQuestion(
+                    q,
+                    a,
+                    category,
+                    keywords.split(",").map { it.trim().lowercase() }.filter { it.isNotEmpty() },
+                    code
+                )
+            )
+        }
+
+        add("What is Selenium WebDriver?", "Selenium WebDriver is an API used to automate web browsers.", "Selenium", "selenium,webdriver,automate,browser")
+        add("What is XPath?", "XPath is a locator used to identify elements in HTML or XML.", "Selenium", "xpath,locator,element")
+        add("What is CSS Selector?", "CSS Selector is a concise locator strategy for identifying web elements.", "Selenium", "css,selector,locator")
+        add("What is an explicit wait?", "It waits for a specific condition before continuing the test.", "Selenium", "explicit,wait,condition")
+        add("What is implicit wait?", "It applies a default wait while WebDriver searches for elements.", "Selenium", "implicit,wait")
+        add("What is FluentWait?", "FluentWait lets us configure timeout, polling interval and ignored exceptions.", "Selenium", "fluent,wait,polling")
+        add("How do you click an element?", "Locate the element and call click().", "Selenium", "click,element", "driver.findElement(By.id(\"login\")).click();")
+        add("How do you enter text?", "Locate the input and call sendKeys().", "Selenium", "sendkeys,text", "driver.findElement(By.id(\"user\")).sendKeys(\"admin\");")
+        add("How do you hover over an element?", "Use the Actions class and moveToElement().", "Selenium", "actions,hover,move", "new Actions(driver).moveToElement(element).perform();")
+        add("How do you double click?", "Use Actions.doubleClick().", "Selenium", "actions,doubleclick", "new Actions(driver).doubleClick(element).perform();")
+        add("How do you right click?", "Use Actions.contextClick().", "Selenium", "actions,rightclick", "new Actions(driver).contextClick(element).perform();")
+        add("How do you drag and drop?", "Use Actions.dragAndDrop().", "Selenium", "actions,drag,drop", "new Actions(driver).dragAndDrop(source, target).perform();")
+        add("How do you switch to a frame?", "Use driver.switchTo().frame().", "Selenium", "frame,switch", "driver.switchTo().frame(element);")
+        add("How do you return from a frame?", "Use defaultContent() to return to the main document.", "Selenium", "frame,default", "driver.switchTo().defaultContent();")
+        add("How do you switch windows?", "Use driver.switchTo().window(handle).", "Selenium", "window,switch", "driver.switchTo().window(handle);")
+        add("How do you accept an alert?", "Switch to the alert and call accept().", "Selenium", "alert,accept", "driver.switchTo().alert().accept();")
+        add("How do you dismiss an alert?", "Switch to the alert and call dismiss().", "Selenium", "alert,dismiss", "driver.switchTo().alert().dismiss();")
+        add("How do you select a dropdown value?", "Use Selenium Select class.", "Selenium", "select,dropdown", "new Select(element).selectByVisibleText(\"India\");")
+        add("How do you get text from an element?", "Use getText().", "Selenium", "gettext,text", "String text = element.getText();")
+        add("How do you check visibility?", "Use isDisplayed().", "Selenium", "displayed,visibility", "element.isDisplayed();")
+        add("How do you check enabled state?", "Use isEnabled().", "Selenium", "enabled", "element.isEnabled();")
+        add("How do you check selection?", "Use isSelected().", "Selenium", "selected", "element.isSelected();")
+        add("How do you take a screenshot?", "Use TakesScreenshot to capture the current browser screen.", "Selenium", "screenshot", "((TakesScreenshot) driver).getScreenshotAs(OutputType.FILE);")
+        add("How do you scroll to an element?", "Use JavaScriptExecutor and scrollIntoView().", "Selenium", "scroll,javascript", "((JavascriptExecutor) driver).executeScript(\"arguments[0].scrollIntoView(true);\", element);")
+        add("What is TestNG?", "TestNG is a Java testing framework used to organize and execute automated tests.", "TestNG", "testng,java,framework")
+        add("What is @BeforeMethod?", "It runs before each test method.", "TestNG", "beforemethod,testng")
+        add("What is @AfterMethod?", "It runs after each test method.", "TestNG", "aftermethod,testng")
+        add("What is an assertion?", "An assertion compares actual behavior with expected behavior.", "TestNG", "assertion,expected,actual")
+        add("What is POM?", "Page Object Model keeps page locators and actions inside dedicated page classes.", "Framework", "pom,page,object,model")
+        add("Why use Page Factory?", "Page Factory can initialize page elements and reduce repeated element lookup code.", "Framework", "pagefactory,element")
+        add("What is a data-driven framework?", "It separates test data from test logic so the same test can run with multiple datasets.", "Framework", "data,driven,framework")
+        add("What is Maven?", "Maven is a build and dependency management tool for Java projects.", "Maven", "maven,build,dependency")
+        add("What is Git?", "Git is a distributed version control system.", "Git", "git,version,control")
+        add("What is CI/CD?", "CI/CD automates build, test and delivery activities.", "CI/CD", "ci,cd,build,test,delivery")
+        add("What is REST API?", "REST is an architectural style commonly used to build HTTP APIs.", "API", "rest,http,api")
+        add("What is GET in REST?", "GET is normally used to retrieve data.", "API", "get,retrieve,api")
+        add("What is POST in REST?", "POST is normally used to create or submit data.", "API", "post,create,api")
+        add("What is SQL?", "SQL is used to query and manage data in relational databases.", "SQL", "sql,database,query")
+        add("What is INNER JOIN?", "INNER JOIN returns rows having matching values in both joined tables.", "SQL", "inner,join,sql")
+        add("What is regression testing?", "Regression testing verifies that existing functionality still works after changes.", "Testing", "regression,testing")
+        add("What is smoke testing?", "Smoke testing checks whether a build is stable enough for detailed testing.", "Testing", "smoke,build,testing")
+        add("What is sanity testing?", "Sanity testing checks focused functionality after a small change or fix.", "Testing", "sanity,testing")
+        add("What is STLC?", "STLC is the Software Testing Life Cycle followed to plan, design, execute and close testing activities.", "Testing", "stlc,testing")
+        add("What is SDLC?", "SDLC is the Software Development Life Cycle used to develop and maintain software.", "Testing", "sdlc,development")
+        add("What is an interface in Java?", "An interface defines a contract that implementing classes follow.", "Core Java", "interface,contract,java")
+        add("What is inheritance?", "Inheritance allows a class to reuse properties and behavior from another class.", "Core Java", "inheritance,class,java")
+        add("What is polymorphism?", "Polymorphism allows the same interface or method concept to have different implementations.", "Core Java", "polymorphism,method")
+        add("What is encapsulation?", "Encapsulation bundles data and methods and controls access to the data.", "Core Java", "encapsulation,data,methods")
+        add("What is an ArrayList?", "ArrayList is a resizable ordered collection in Java.", "Collections", "arraylist,collection")
+        add("What is HashMap?", "HashMap stores key-value pairs and provides lookup using a key.", "Collections", "hashmap,key,value")
+        add("What is exception handling?", "Exception handling manages runtime problems using constructs such as try, catch and finally.", "Core Java", "exception,try,catch")
+        add("What is method overloading?", "Overloading means multiple methods have the same name with different parameter lists.", "Core Java", "overloading,method")
+        add("What is method overriding?", "Overriding means a child class provides its own implementation of a parent method.", "Core Java", "overriding,method")
+        add("What is a String immutable?", "Java String objects are immutable, so their value cannot be changed after creation.", "Core Java", "string,immutable")
+
+        val topics = listOf("Core Java", "Selenium", "TestNG", "Framework", "API", "SQL", "Testing", "Maven", "Git", "CI/CD")
+        var counter = 1
+        while (list.size < 420) {
+            val topic = topics[(list.size) % topics.size]
+            val number = counter++
+            add(
+                "Scenario $number: explain an important $topic interview situation.",
+                "Explain the problem, your approach, the tool or concept used, the validation performed and the final result. Keep the answer concise and project-focused.",
+                topic,
+                topic.lowercase()
+            )
+        }
+        return list
+    }
+
+    private fun backgroundColor(): Int = prefs.getInt("background", Color.rgb(242, 245, 255))
+    private fun primaryColor(): Int = prefs.getInt("primary", Color.rgb(78, 93, 210))
+
+    private fun createLayout(): LinearLayout = LinearLayout(this).apply {
+        orientation = LinearLayout.VERTICAL
+        setPadding(24, 24, 24, 24)
+        setBackgroundColor(backgroundColor())
+    }
+
+    private fun label(text: String, size: Float = 18f): TextView = TextView(this).apply {
+        this.text = text
+        textSize = size
+        gravity = Gravity.CENTER
+        setTextColor(Color.rgb(30, 40, 75))
+        setPadding(8, 10, 8, 10)
+    }
+
+    private fun button(text: String): Button = Button(this).apply {
+        this.text = text
+        textSize = 16f
+        isAllCaps = false
+        setTextColor(Color.WHITE)
+        setBackgroundColor(primaryColor())
+    }
+
+    private fun card(text: String): TextView = TextView(this).apply {
+        this.text = text
+        textSize = 17f
+        setPadding(20, 20, 20, 20)
+        setTextColor(Color.DKGRAY)
+        setBackgroundColor(Color.WHITE)
+        elevation = 5f
+    }
+
+    private fun addViewAnimated(view: View) {
+        root.addView(view)
+        view.alpha = 0f
+        view.animate().alpha(1f).setDuration(250).start()
+    }
+
+    private fun animatedGirl(): TextView {
+        val girl = label("👩‍💻✨", 40f)
+        if (prefs.getBoolean("animation", true)) {
+            val animation = TranslateAnimation(-30f, 30f, 0f, 0f)
+            animation.duration = 1400
+            animation.repeatMode = Animation.REVERSE
+            animation.repeatCount = Animation.INFINITE
+            girl.startAnimation(animation)
+        }
+        return girl
+    }
+
+    private fun showHome() {
+        root = createLayout()
+        addViewAnimated(label("📚  📖  📕  📗  📘  📙", 25f))
+        addViewAnimated(animatedGirl())
+        addViewAnimated(label("🎯 Interview Practice", 30f))
+        addViewAnimated(label("420+ Q&A • Speak • Exam • Quick Code", 17f))
+        addViewAnimated(button("🎤 Start Test").apply { setOnClickListener { showTest() } })
+        addViewAnimated(button("📚 All Questions & Answers").apply { setOnClickListener { showAllQuestions() } })
+        addViewAnimated(button("📝 Review My Answers").apply { setOnClickListener { showReview() } })
+        addViewAnimated(button("⏱️ Exam Mode").apply { setOnClickListener { showExamSetup() } })
+        addViewAnimated(button("⚡ Selenium Quick Code").apply { setOnClickListener { showQuickCode() } })
+        addViewAnimated(button("⚙️ Settings").apply { setOnClickListener { showSettings() } })
+        addViewAnimated(button("🗑️ Clear Results").apply {
+            setOnClickListener {
+                attempts.clear()
+                totalScore = 0
+                answeredCount = 0
+                Toast.makeText(this@MainActivity, "Results cleared", Toast.LENGTH_SHORT).show()
+            }
+        })
+        setContentView(root)
+    }
+
+    private fun showTest() {
+        root = createLayout()
+        addViewAnimated(button("← Home").apply { setOnClickListener { stopListening(); showHome() } })
+        scoreView = label("⭐ Score: $totalScore • Answered: $answeredCount", 17f)
+        addViewAnimated(scoreView)
+        questionView = card("")
+        addViewAnimated(questionView)
+        speakButton = button("🎤 Start Speaking")
+        addViewAnimated(speakButton)
+        answerView = card("")
+        answerView.visibility = View.GONE
+        addViewAnimated(answerView)
+        addViewAnimated(button("➡️ Next Question").apply {
+            setOnClickListener {
+                stopListening()
+                questionIndex = (questionIndex + 1) % questions.size
+                showCurrentQuestion()
+            }
+        })
+        setContentView(root)
+        showCurrentQuestion()
+        speakButton.setOnClickListener { if (listening) finishAnswer() else startListening() }
+    }
+
+    private fun showCurrentQuestion() {
+        questionView.text = "Q${questionIndex + 1}\n\n${questions[questionIndex].question}"
+        speakButton.text = "🎤 Start Speaking"
+    }
+
+    private fun startListening() {
+        if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(arrayOf(Manifest.permission.RECORD_AUDIO), 7)
+            return
+        }
+        try {
+            speechRecognizer?.destroy()
+            speechRecognizer = SpeechRecognizer.createSpeechRecognizer(this)
+            speechRecognizer?.setRecognitionListener(recognitionListener)
+            spokenText.clear()
+            finishingAnswer = false
+            listening = true
+            speakButton.text = "⏹️ Listening..."
+            answerView.visibility = View.VISIBLE
+            answerView.text = "🎧 Ready... speak your answer."
+            startRecognition()
+        } catch (_: Exception) {
+            answerView.visibility = View.VISIBLE
+            answerView.text = "Voice could not start. Please try again."
+            listening = false
+        }
+    }
+
+    private val recognitionListener = object : RecognitionListener {
+        override fun onReadyForSpeech(params: Bundle?) { answerView.text = "🎧 Ready..." }
+        override fun onBeginningOfSpeech() { answerView.text = "🎧 Listening..." }
+        override fun onRmsChanged(rmsdB: Float) = Unit
+        override fun onBufferReceived(buffer: ByteArray?) = Unit
+        override fun onEndOfSpeech() = Unit
+        override fun onError(error: Int) {
+            if (listening && !finishingAnswer) {
+                handler.postDelayed({ if (listening && !finishingAnswer) startRecognition() }, 350)
+            }
+        }
+        override fun onResults(results: Bundle?) {
+            val text = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull().orEmpty()
+            if (text.isNotBlank()) spokenText.append(" ").append(text)
+            if (!finishingAnswer) handler.postDelayed({ finishAnswer() }, 500)
+        }
+        override fun onPartialResults(results: Bundle?) {
+            val text = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull().orEmpty()
+            if (text.isNotBlank()) answerView.text = "🎧 $text"
+        }
+        override fun onEvent(eventType: Int, params: Bundle?) = Unit
+    }
+
+    private fun startRecognition() {
+        try {
+            val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+                putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+                putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.ENGLISH)
+                putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
+                putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 3000L)
+                putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 3000L)
+            }
+            speechRecognizer?.startListening(intent)
+        } catch (_: Exception) {
+            listening = false
+            answerView.text = "Voice recognition is unavailable."
+        }
+    }
+
+    private fun finishAnswer() {
+        if (finishingAnswer) return
+        finishingAnswer = true
+        listening = false
+        try { speechRecognizer?.stopListening() } catch (_: Exception) { }
+
+        val question = questions[questionIndex]
+        val spoken = spokenText.toString().trim()
+        val lower = spoken.lowercase()
+        val hits = question.keywords.count { lower.contains(it) }
+        val percentage = if (question.keywords.isEmpty()) 0 else hits * 100 / question.keywords.size
+        val mark = when {
+            percentage >= 75 -> 10
+            percentage >= 50 -> 7
+            percentage >= 25 -> 4
+            else -> 1
+        }
+        totalScore += mark
+        answeredCount++
+        attempts.add(Attempt(questionIndex, spoken, mark))
+
+        answerView.visibility = View.VISIBLE
+        answerView.text = "🗣️ YOUR ANSWER\n${spoken.ifBlank { "No answer detected" }}\n\n⭐ $mark/10\n\n✅ CORRECT ANSWER\n${question.answer}" +
+            if (question.code.isNotBlank()) "\n\n⚡ ONE-LINE CODE\n${question.code}" else ""
+        scoreView.text = "⭐ Score: $totalScore • Answered: $answeredCount"
+        speakButton.text = "🎤 Start Speaking"
+    }
+
+    private fun stopListening() {
+        finishingAnswer = true
+        listening = false
+        try { speechRecognizer?.stopListening() } catch (_: Exception) { }
+        try { speechRecognizer?.destroy() } catch (_: Exception) { }
+        speechRecognizer = null
+    }
+
+    private fun showAllQuestions() {
+        val scroll = ScrollView(this)
+        root = createLayout()
+        addViewAnimated(button("← Home").apply { setOnClickListener { showHome() } })
+        addViewAnimated(label("📚 All Questions & Answers", 27f))
+        questions.forEachIndexed { index, question ->
+            val code = if (question.code.isNotBlank()) "\n\n⚡ ONE-LINE CODE\n${question.code}" else ""
+            addViewAnimated(card("Q${index + 1}. ${question.question}\n\n${question.answer}$code"))
+        }
+        scroll.addView(root)
+        setContentView(scroll)
+    }
+
+    private fun showQuickCode() {
+        val scroll = ScrollView(this)
+        root = createLayout()
+        addViewAnimated(button("← Home").apply { setOnClickListener { showHome() } })
+        addViewAnimated(label("⚡ Selenium Quick Code", 27f))
+        seleniumQuickCodes.forEach { item ->
+            addViewAnimated(card("${item.topic}\n\n${item.code}\n\n${item.use}"))
+        }
+        scroll.addView(root)
+        setContentView(scroll)
+    }
+
+    private fun showReview() {
+        val scroll = ScrollView(this)
+        root = createLayout()
+        addViewAnimated(button("← Home").apply { setOnClickListener { showHome() } })
+        addViewAnimated(label("📝 My Answers", 27f))
+        if (attempts.isEmpty()) addViewAnimated(label("No attempts yet.", 18f))
+        attempts.forEach { attempt ->
+            val question = questions[attempt.questionIndex]
+            addViewAnimated(card("Q${attempt.questionIndex + 1}. ${question.question}\n\n🗣️ YOUR ANSWER\n${attempt.spokenAnswer.ifBlank { "No answer detected" }}\n\n⭐ ${attempt.score}/10\n\n✅ CORRECT ANSWER\n${question.answer}"))
+        }
+        scroll.addView(root)
+        setContentView(scroll)
+    }
+
+    private fun showExamSetup() {
+        root = createLayout()
+        addViewAnimated(button("← Home").apply { setOnClickListener { showHome() } })
+        addViewAnimated(animatedGirl())
+        addViewAnimated(label("📝 Exam Mode", 29f))
+        addViewAnimated(label("Choose exam size", 18f))
+        listOf(20, 50, 100).forEach { count ->
+            addViewAnimated(button("$count Questions").apply { setOnClickListener { startExam(count) } })
+        }
+        addViewAnimated(card("20 Q = 20 min • 50 Q = 45 min • 100 Q = 90 min"))
+        setContentView(root)
+    }
+
+    private fun startExam(count: Int) {
+        examQuestions = questions.shuffled().take(count)
+        examIndex = 0
+        examScore = 0
+        root = createLayout()
+        addViewAnimated(button("✕ Exit").apply { setOnClickListener { examTimer?.cancel(); showHome() } })
+        examStatusView = label("Question 1/$count • Score 0", 17f)
+        addViewAnimated(examStatusView)
+        examQuestionView = card("")
+        addViewAnimated(examQuestionView)
+        val options = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        addViewAnimated(options)
+        examNextButton = button("Next")
+        examNextButton.isEnabled = false
+        addViewAnimated(examNextButton)
+        setContentView(root)
+        renderExamQuestion(options)
+
+        val minutes = if (count <= 20) 20L else if (count <= 50) 45L else 90L
+        examTimer = object : CountDownTimer(minutes * 60_000L, 1_000L) {
+            override fun onTick(millisUntilFinished: Long) {
+                val min = millisUntilFinished / 60_000L
+                val sec = (millisUntilFinished / 1_000L) % 60L
+                examStatusView.text = "Question ${examIndex + 1}/$count • Score $examScore • ⏱️ $min:${String.format("%02d", sec)}"
+            }
+            override fun onFinish() { finishExam() }
+        }.start()
+    }
+
+    private fun renderExamQuestion(options: LinearLayout) {
+        options.removeAllViews()
+        examNextButton.isEnabled = false
+        examNextButton.text = if (examIndex == examQuestions.lastIndex) "Submit Exam" else "Next"
+        val question = examQuestions[examIndex]
+        examQuestionView.text = "[${question.category}]\n\n${question.question}"
+
+        val distractors = questions.filter { it.question != question.question }.shuffled().take(3).map { it.answer }
+        val answers = (listOf(question.answer) + distractors).shuffled()
+
+        for (answer in answers) {
+            val optionButton = button(answer)
+            options.addView(optionButton)
+            optionButton.setOnClickListener {
+                for (j in 0 until options.childCount) options.getChildAt(j).isEnabled = false
+                optionButton.text = if (answer == question.answer) "✅ $answer" else "❌ $answer"
+                if (answer == question.answer) examScore++
+                examNextButton.isEnabled = true
+            }
+        }
+
+        examNextButton.setOnClickListener {
+            if (examIndex == examQuestions.lastIndex) finishExam() else {
+                examIndex++
+                renderExamQuestion(options)
+            }
+        }
+    }
+
+    private fun finishExam() {
+        examTimer?.cancel()
+        val percentage = if (examQuestions.isEmpty()) 0 else examScore * 100 / examQuestions.size
+        root = createLayout()
+        addViewAnimated(animatedGirl())
+        addViewAnimated(label("🏆 Exam Complete", 30f))
+        addViewAnimated(label("$examScore / ${examQuestions.size}", 38f))
+        addViewAnimated(label("$percentage%", 30f))
+        val message = when {
+            percentage >= 90 -> "🏆 Excellent!"
+            percentage >= 75 -> "🌟 Very Good!"
+            percentage >= 60 -> "👍 Good progress!"
+            else -> "💪 Keep practicing!"
+        }
+        addViewAnimated(card(message))
+        addViewAnimated(button("← Home").apply { setOnClickListener { showHome() } })
+        setContentView(root)
+    }
+
+    private fun showSettings() {
+        root = createLayout()
+        addViewAnimated(button("← Home").apply { setOnClickListener { showHome() } })
+        addViewAnimated(animatedGirl())
+        addViewAnimated(label("⚙️ Settings", 28f))
+        addViewAnimated(label("Button colour", 17f))
+        val primaryColors = listOf(
+            "🔵 Blue" to Color.rgb(78, 93, 210),
+            "🟣 Purple" to Color.rgb(125, 82, 190),
+            "🟢 Green" to Color.rgb(35, 145, 100),
+            "🟠 Orange" to Color.rgb(225, 125, 45),
+            "🌸 Pink" to Color.rgb(205, 75, 135),
+            "🔴 Red" to Color.rgb(205, 55, 65)
+        )
+        primaryColors.forEach { (name, color) ->
+            addViewAnimated(button(name).apply { setOnClickListener { prefs.edit().putInt("primary", color).apply(); showSettings() } })
+        }
+        addViewAnimated(label("Background colour", 17f))
+        val backgrounds = listOf(
+            "☁️ Light Blue" to Color.rgb(205, 220, 255),
+            "🌙 Dark" to Color.rgb(35, 38, 50),
+            "🌿 Green" to Color.rgb(205, 240, 218),
+            "🌸 Pink" to Color.rgb(255, 210, 232),
+            "🌊 Sky" to Color.rgb(190, 225, 255),
+            "🌅 Cream" to Color.rgb(255, 230, 180),
+            "⚪ White" to Color.WHITE
+        )
+        backgrounds.forEach { (name, color) ->
+            addViewAnimated(button(name).apply { setOnClickListener { prefs.edit().putInt("background", color).apply(); showSettings() } })
+        }
+        val animationSwitch = Switch(this).apply {
+            text = "✨ Animation + moving character"
+            isChecked = prefs.getBoolean("animation", true)
+            setOnCheckedChangeListener { _, enabled -> prefs.edit().putBoolean("animation", enabled).apply() }
+        }
+        addViewAnimated(animationSwitch)
+        addViewAnimated(card("Question, your answer and correct answer are shown separately. Voice automatically completes after about 3 seconds of silence."))
+        addViewAnimated(button("Save & Home").apply { setOnClickListener { showHome() } })
+        setContentView(root)
+    }
+
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == 7 && grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) startListening()
+    }
+
+    override fun onDestroy() {
+        stopListening()
+        examTimer?.cancel()
+        super.onDestroy()
+    }
 }
